@@ -1,1 +1,528 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mean Median Mode Range</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b7a75'/%3E%3Crect x='11' y='34' width='10' height='19' rx='2' fill='white'/%3E%3Crect x='27' y='16' width='10' height='37' rx='2' fill='white'/%3E%3Crect x='43' y='26' width='10' height='27' rx='2' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+/* Layout: one centered column, one task card at a time, progress strip on top. */
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --ink: #12263a;
+  --muted: #55687a;
+  --line: #d5dee8;
+  --accent: #0b7a75;
+  --accent-ink: #ffffff;
+  --chip: #e3f1ef;
+  --ok: #17803d;
+  --ok-bg: #e2f5e8;
+  --bad: #b83227;
+  --bad-bg: #fbe7e4;
+  --hint-bg: #fff4d6;
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e1a26;
+    --surface: #162636;
+    --ink: #e8f0f7;
+    --muted: #9db0c2;
+    --line: #2a4054;
+    --accent: #3cc2ba;
+    --accent-ink: #06201f;
+    --chip: #1d3a3b;
+    --ok: #5fd68a;
+    --ok-bg: #173a27;
+    --bad: #ff8f84;
+    --bad-bg: #3d1f1c;
+    --hint-bg: #3a3218;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1a26;
+  --surface: #162636;
+  --ink: #e8f0f7;
+  --muted: #9db0c2;
+  --line: #2a4054;
+  --accent: #3cc2ba;
+  --accent-ink: #06201f;
+  --chip: #1d3a3b;
+  --ok: #5fd68a;
+  --ok-bg: #173a27;
+  --bad: #ff8f84;
+  --bad-bg: #3d1f1c;
+  --hint-bg: #3a3218;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 18px;
+  line-height: 1.55;
+}
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: 34px; line-height: 1.1; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 6px 0 0; }
+
+details.remind { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+details.remind summary { cursor: pointer; font-weight: 700; }
+details.remind dl { margin: 12px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; }
+details.remind dt { font-weight: 700; color: var(--accent); }
+details.remind dd { margin: 0; }
+@media (max-width: 480px) { details.remind dl { grid-template-columns: 1fr; gap: 2px; } details.remind dd { margin-bottom: 8px; } }
+
+.choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.choices.counts { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 560px) { .choices { grid-template-columns: 1fr; } .choices.counts { grid-template-columns: repeat(4, 1fr); } }
+.choice { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; background: var(--bg); color: var(--ink); border: 2px solid var(--line); border-radius: 12px; padding: 14px 16px; font-weight: 400; }
+.choice b { font-family: var(--display); font-size: 22px; }
+.choice span { font-size: 15px; color: var(--muted); }
+.counts .choice { align-items: center; }
+.choice.on { border-color: var(--accent); background: var(--chip); }
+.choice.on b { color: var(--accent); }
+.progress { display: flex; gap: 6px; flex-wrap: wrap; }
+.dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 14px; font-weight: 700; color: var(--muted); background: var(--surface); }
+.dot.now { border-color: var(--accent); color: var(--accent); }
+.dot.good { background: var(--ok); border-color: var(--ok); color: #fff; }
+.dot.help { background: var(--hint-bg); border-color: #d9a300; color: var(--ink); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+.tag { align-self: flex-start; background: var(--chip); color: var(--accent); font-weight: 700; font-size: 14px; border-radius: 999px; padding: 2px 12px; }
+.ctx { margin: 0; }
+.nums { display: flex; flex-wrap: wrap; gap: 10px; }
+.num { background: var(--chip); border-radius: 10px; padding: 6px 14px; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
+.unit { color: var(--muted); font-size: 16px; margin: 0; }
+
+.fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (max-width: 520px) { .fields { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 700; }
+.field input[type="text"] { font: inherit; font-size: 22px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); width: 100%; font-variant-numeric: tabular-nums; }
+.field input[type="text"]:disabled { opacity: .5; }
+.field.ok input[type="text"] { border-color: var(--ok); background: var(--ok-bg); }
+.field.no input[type="text"] { border-color: var(--bad); background: var(--bad-bg); }
+.field .msg { font-size: 15px; min-height: 22px; }
+.field.ok .msg { color: var(--ok); }
+.field.no .msg { color: var(--bad); }
+.nomode { display: flex; align-items: center; gap: 8px; font-size: 16px; color: var(--muted); }
+.nomode input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+button { font: inherit; font-weight: 700; border-radius: 10px; padding: 11px 20px; border: 2px solid var(--accent); cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+button.ghost { background: transparent; color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid #e8a317; outline-offset: 2px; }
+
+.banner { border-radius: 10px; padding: 12px 16px; font-weight: 700; }
+.banner.ok { background: var(--ok-bg); color: var(--ok); }
+.banner.no { background: var(--bad-bg); color: var(--bad); }
+
+.solution { background: var(--hint-bg); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.solution h3 { margin: 0; font-family: var(--display); font-size: 18px; }
+.solution p { margin: 0; }
+.solution .step b { color: var(--accent); }
+.sorted { display: flex; flex-wrap: wrap; gap: 6px; }
+.sorted span { background: var(--surface); border-radius: 8px; padding: 2px 10px; font-weight: 700; font-variant-numeric: tabular-nums; border: 1px solid var(--line); }
+.sorted span.mid { border-color: var(--accent); background: var(--chip); }
+
+.final { text-align: center; align-items: center; }
+.stats { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 14px; }
+.stats h3 { font-family: var(--display); font-size: 18px; margin: 0; }
+.bars { display: grid; grid-template-columns: 90px 1fr 34px; gap: 8px 12px; align-items: center; }
+.bar { height: 14px; border-radius: 7px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--bad); }
+.bars b { text-align: right; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 16px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+th { color: var(--muted); font-weight: 700; }
+.pill { border-radius: 999px; padding: 1px 10px; font-size: 14px; font-weight: 700; }
+.pill.good { background: var(--ok-bg); color: var(--ok); }
+.pill.retry { background: var(--hint-bg); color: var(--ink); }
+.pill.shown { background: var(--bad-bg); color: var(--bad); }
+.big { font-family: var(--display); font-size: 64px; font-weight: 800; color: var(--accent); line-height: 1; }
+@media (prefers-reduced-motion: no-preference) { .card { animation: rise .25s ease-out; } @keyframes rise { from { opacity: .0; transform: translateY(6px); } to { opacity: 1; transform: none; } } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Mean, median, mode, range</h1>
+    <p class="sub" id="sub">Выберите уровень и количество заданий.</p>
+  </header>
+
+  <details class="remind">
+    <summary>Напоминание</summary>
+    <dl>
+      <dt>Mean</dt><dd>Справедливая доля. Если бы всем досталось поровну, сколько получил бы каждый? Сложите все числа и поделите сумму на их количество.</dd>
+      <dt>Median</dt><dd>Середина. Расставьте числа по порядку от меньшего к большему и посмотрите, что стоит посередине.</dd>
+      <dt>Mode</dt><dd>Самое популярное число, которое встречается чаще всех. Бывает, что его нет, а бывает, что их два.</dd>
+      <dt>Range</dt><dd>Насколько числа разбросаны: наибольшее минус наименьшее.</dd>
+    </dl>
+  </details>
+
+  <div class="progress" id="progress" aria-label="Прогресс"></div>
+  <div id="stage"></div>
+</main>
+
+<script>
+(function () {
+  var TOTAL = 10;
+  var settings = { level: 'medium', count: 10 };
+
+  var LEVELS = {
+    easy: { label: 'Лёгкий', note: '5–7 небольших чисел, понятный mode, простые сюжетные задачи', plan: [
+      { n: 5, lo: 1,  hi: 9,  kind: 'uni',  half: false, tag: 'Разминка' },
+      { n: 5, lo: 2,  hi: 12, kind: 'uni',  half: false, tag: 'Разминка' },
+      { n: 5, lo: 3,  hi: 15, kind: 'uni',  half: false, tag: 'Разминка' },
+      { n: 6, lo: 2,  hi: 15, kind: 'uni',  half: true,  tag: 'Чётное количество чисел' },
+      { n: 5, lo: 3,  hi: 15, kind: 'none', half: false, tag: 'Ни одно число не повторяется' },
+      { n: 6, lo: 2,  hi: 10, kind: 'uni',  half: true,  tag: 'Сюжетная задача', ctx: 'rp' },
+      { n: 7, lo: 1,  hi: 15, kind: 'uni',  half: false, tag: 'Больше чисел' },
+      { n: 6, lo: 3,  hi: 20, kind: 'bi',   half: true,  tag: 'Два mode' },
+      { n: 6, lo: 20, hi: 60, kind: 'uni',  half: true,  tag: 'Сюжетная задача', ctx: 'rub' },
+      { n: 7, lo: 10, hi: 40, kind: 'uni',  half: false, tag: 'Сюжетная задача', ctx: 'min' }
+    ] },
+    medium: { label: 'Средний', note: '5–9 чисел, чётное количество, особые случаи mode, сюжетные задачи', plan: [
+      { n: 5, lo: 2,  hi: 12, kind: 'uni',  half: false, tag: 'Разминка' },
+      { n: 5, lo: 3,  hi: 20, kind: 'uni',  half: false, tag: 'Разминка' },
+      { n: 7, lo: 1,  hi: 20, kind: 'uni',  half: false, tag: 'Больше чисел' },
+      { n: 6, lo: 2,  hi: 18, kind: 'uni',  half: true,  tag: 'Чётное количество чисел' },
+      { n: 7, lo: 5,  hi: 30, kind: 'none', half: false, tag: 'Ни одно число не повторяется' },
+      { n: 8, lo: 1,  hi: 15, kind: 'bi',   half: true,  tag: 'Два mode' },
+      { n: 6, lo: 3,  hi: 15, kind: 'uni',  half: true,  tag: 'Сюжетная задача', ctx: 'rp' },
+      { n: 7, lo: 20, hi: 90, kind: 'none', half: false, tag: 'Сюжетная задача', ctx: 'rub' },
+      { n: 8, lo: 10, hi: 60, kind: 'uni',  half: true,  tag: 'Сюжетная задача', ctx: 'min' },
+      { n: 9, lo: 55, hi: 98, kind: 'bi',   half: false, tag: 'Вызов', ctx: 'score' }
+    ] },
+    hard: { label: 'Сложный', note: '8–10 больших чисел, ничьи и наборы без mode, сюжетные задачи', plan: [
+      { n: 8,  lo: 10, hi: 60, kind: 'uni',  half: true,  tag: 'Большой набор' },
+      { n: 9,  lo: 1,  hi: 30, kind: 'none', half: false, tag: 'Ни одно число не повторяется' },
+      { n: 8,  lo: 5,  hi: 40, kind: 'bi',   half: true,  tag: 'Два mode' },
+      { n: 9,  lo: 3,  hi: 25, kind: 'uni',  half: false, tag: 'Сюжетная задача', ctx: 'rp' },
+      { n: 10, lo: 20, hi: 99, kind: 'uni',  half: true,  tag: 'Десять чисел' },
+      { n: 8,  lo: 20, hi: 99, kind: 'bi',   half: true,  tag: 'Сюжетная задача', ctx: 'rub' },
+      { n: 10, lo: 10, hi: 80, kind: 'none', half: true,  tag: 'Нет mode, десять чисел' },
+      { n: 9,  lo: 40, hi: 99, kind: 'bi',   half: false, tag: 'Сюжетная задача', ctx: 'score' },
+      { n: 10, lo: 10, hi: 90, kind: 'uni',  half: true,  tag: 'Сюжетная задача', ctx: 'min' },
+      { n: 10, lo: 5,  hi: 40, kind: 'bi',   half: true,  tag: 'Вызов', ctx: 'rp' }
+    ] }
+  };
+
+  /* Spread N tasks over the 10-step ramp of the chosen level, so difficulty still rises. */
+  function makePlan() {
+    var base = LEVELS[settings.level].plan, N = settings.count, out = [], i;
+    for (i = 0; i < N; i++) out.push(base[Math.min(base.length - 1, Math.floor(i * base.length / N))]);
+    return out;
+  }
+
+  var CONTEXTS = {
+    rp: [
+      { text: 'Ученики сравнили цену одной порции наси горенг в разных кафе на Бали.', unit: 'Rp', scale: 1000, money: true },
+      { text: 'Ученики рассказали, сколько карманных денег они получают за неделю.', unit: 'Rp', scale: 1000, money: true },
+      { text: 'Турист посмотрел цену одного кофе в разных кафе в Чангу.', unit: 'Rp', scale: 1000, money: true }
+    ],
+    rub: [
+      { text: 'Лена сравнила цену тетради в разных магазинах.', unit: '₽', scale: 10, money: true },
+      { text: 'Школьники сравнили цену обеда в разных столовых.', unit: '₽', scale: 10, money: true }
+    ],
+    min: [
+      { text: 'Ученица записывала, сколько минут она делала домашнее задание каждый день.', unit: 'мин', scale: 1, money: false },
+      { text: 'Пловец записывал, сколько минут он тренировался каждый день.', unit: 'min', scale: 1, money: false }
+    ],
+    score: [
+      { text: 'Класс написал тест по математике. Вот баллы (из 100).', unit: 'баллов', scale: 1, money: false }
+    ]
+  };
+
+  function rnd(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = rnd(0, i); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function pick(a) { return a[rnd(0, a.length - 1)]; }
+
+  function stats(arr) {
+    var s = arr.slice().sort(function (a, b) { return a - b; });
+    var n = s.length, sum = 0, f = {}, maxf = 0, i;
+    for (i = 0; i < n; i++) { sum += s[i]; f[s[i]] = (f[s[i]] || 0) + 1; if (f[s[i]] > maxf) maxf = f[s[i]]; }
+    var modes = [];
+    if (maxf > 1) { Object.keys(f).forEach(function (k) { if (f[k] === maxf) modes.push(Number(k)); }); modes.sort(function (a, b) { return a - b; }); }
+    var median = n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+    return { sorted: s, n: n, sum: sum, mean: sum / n, median: median, modes: modes, maxf: maxf, range: s[n - 1] - s[0] };
+  }
+
+  function genSet(p) {
+    var tries = 0, arr, st, k;
+    while (tries++ < 30000) {
+      arr = [];
+      if (p.kind === 'uni') {
+        for (k = 0; k < p.n; k++) arr.push(rnd(p.lo, p.hi));
+      } else if (p.kind === 'none') {
+        var pool = []; for (k = p.lo; k <= p.hi; k++) pool.push(k);
+        arr = shuffle(pool).slice(0, p.n);
+      } else {
+        var a = rnd(p.lo, p.hi), b = rnd(p.lo, p.hi);
+        if (a === b) continue;
+        arr = [a, a, b, b];
+        while (arr.length < p.n) { var x = rnd(p.lo, p.hi); if (x !== a && x !== b && arr.indexOf(x) === -1) arr.push(x); }
+      }
+      st = stats(arr);
+      if (p.kind === 'uni' && !(st.modes.length === 1 && st.maxf <= 3)) continue;
+      if (p.kind === 'none' && st.modes.length !== 0) continue;
+      if (p.kind === 'bi' && st.modes.length !== 2) continue;
+      if ((st.sum * (p.half ? 2 : 1)) % p.n !== 0) continue;
+      if (st.sorted.every(function (v, i) { return v === arr[i]; })) continue;
+      return shuffle(arr);
+    }
+    return arr;
+  }
+
+  function buildTask(p) {
+    var base = genSet(p);
+    var ctx = p.ctx ? pick(CONTEXTS[p.ctx]) : null;
+    var scale = ctx ? ctx.scale : 1;
+    var data = base.map(function (v) { return v * scale; });
+    return { p: p, ctx: ctx, data: data, st: stats(data), tries: 0, err: { mean: 0, median: 0, mode: 0, range: 0 }, solved: false, firstTry: false, shown: false, checked: null };
+  }
+
+  function fmt(v) { return Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 2 }); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  var tasks, cur, finished, starting = true;
+  var stage = document.getElementById('stage');
+  var progress = document.getElementById('progress');
+  var subEl = document.getElementById('sub');
+
+  function newSet() {
+    TOTAL = settings.count;
+    tasks = makePlan().map(buildTask);
+    cur = 0; finished = false; starting = false;
+    subEl.textContent = 'Заданий: ' + TOTAL + ' · Уровень: ' + LEVELS[settings.level].label + '. Каждое немного сложнее предыдущего.';
+    render();
+  }
+
+  function showStart() {
+    starting = true;
+    subEl.textContent = 'Выберите уровень и количество заданий.';
+    progress.innerHTML = '';
+    var h = '<section class="card" id="start">';
+    h += '<h2>Уровень</h2><div class="choices" id="lv">';
+    ['easy', 'medium', 'hard'].forEach(function (k) {
+      h += '<button type="button" class="choice' + (settings.level === k ? ' on' : '') + '" data-v="' + k + '" aria-pressed="' + (settings.level === k) + '"><b>' + LEVELS[k].label + '</b><span>' + LEVELS[k].note + '</span></button>';
+    });
+    h += '</div><h2>Количество заданий</h2><div class="choices counts" id="ct">';
+    [5, 10, 15, 20].forEach(function (c) {
+      h += '<button type="button" class="choice' + (settings.count === c ? ' on' : '') + '" data-v="' + c + '" aria-pressed="' + (settings.count === c) + '"><b>' + c + '</b></button>';
+    });
+    h += '</div><p class="unit">Примерно ' + Math.round(settings.count * 1.2) + '–' + Math.round(settings.count * 1.6) + ' минут.</p>';
+    h += '<div class="actions"><button id="go">Начать</button></div></section>';
+    stage.innerHTML = h;
+    function wire(id, key, conv) {
+      document.querySelectorAll('#' + id + ' .choice').forEach(function (b) {
+        b.onclick = function () { settings[key] = conv(b.getAttribute('data-v')); showStart(); document.querySelector('#' + id + ' .choice.on').focus(); };
+      });
+    }
+    wire('lv', 'level', String);
+    wire('ct', 'count', Number);
+    document.getElementById('go').onclick = newSet;
+  }
+
+  function renderProgress() {
+    progress.innerHTML = tasks.map(function (t, i) {
+      var c = 'dot';
+      if (t.solved && t.firstTry) c += ' good'; else if (t.solved || t.shown) c += ' help';
+      if (i === cur && !finished) c += ' now';
+      return '<div class="' + c + '">' + (i + 1) + '</div>';
+    }).join('');
+  }
+
+  function unitLabel(t) {
+    if (!t.ctx) return '';
+    return t.ctx.money ? 'Вводите только число, без ' + esc(t.ctx.unit) + '. Пример: 15000' : 'Ответы в единицах: ' + esc(t.ctx.unit) + '.';
+  }
+
+  function render() {
+    renderProgress();
+    if (finished) return renderFinal();
+    var t = tasks[cur];
+    var chips = t.data.map(function (v) { return '<span class="num">' + fmt(v) + (t.ctx && t.ctx.money ? '' : '') + '</span>'; }).join('');
+    var h = '<section class="card" id="card">';
+    h += '<span class="tag">Задание ' + (cur + 1) + ' из ' + TOTAL + ' · ' + esc(t.p.tag) + '</span>';
+    if (t.ctx) {
+      h += '<p class="ctx">' + esc(t.ctx.text) + (t.ctx.money ? ' Цены в ' + esc(t.ctx.unit) + ':' : '') + '</p>';
+    } else {
+      h += '<h2>Найдите mean, median, mode и range</h2>';
+    }
+    h += '<div class="nums" aria-label="Числа">' + chips + '</div>';
+    if (t.ctx) h += '<h2>Найдите mean, median, mode и range</h2><p class="unit">' + unitLabel(t) + '</p>';
+    h += '<div class="fields">';
+    h += field('mean', 'Mean') + field('median', 'Median');
+    h += '<div class="field" id="f-mode"><label for="in-mode">Mode</label><input type="text" id="in-mode" inputmode="decimal" autocomplete="off" placeholder="если два, запишите оба: 3, 7"><label class="nomode"><input type="checkbox" id="in-nomode"> Mode нет</label><div class="msg"></div></div>';
+    h += field('range', 'Range');
+    h += '</div>';
+    h += '<div id="feedback"></div>';
+    h += '<div class="actions"><button id="check">Проверить</button><button class="ghost" id="show">Показать решение</button><button class="ghost" id="next" disabled>' + (cur === TOTAL - 1 ? 'Завершить' : 'Дальше') + '</button></div>';
+    h += '<div id="sol"></div>';
+    h += '</section>';
+    stage.innerHTML = h;
+
+    document.getElementById('check').onclick = check;
+    document.getElementById('show').onclick = showSolution;
+    document.getElementById('next').onclick = next;
+    document.getElementById('in-nomode').onchange = function () {
+      var i = document.getElementById('in-mode');
+      i.disabled = this.checked; if (this.checked) i.value = '';
+    };
+    stage.querySelectorAll('input[type="text"]').forEach(function (i) {
+      i.addEventListener('keydown', function (e) { if (e.key === 'Enter') check(); });
+    });
+    var first = document.getElementById('in-mean'); if (first) first.focus({ preventScroll: true });
+    if (t.solved || t.shown) { restore(t); }
+  }
+
+  function field(id, label) {
+    return '<div class="field" id="f-' + id + '"><label for="in-' + id + '">' + label + '</label><input type="text" id="in-' + id + '" inputmode="decimal" autocomplete="off"><div class="msg"></div></div>';
+  }
+
+  function num(s) {
+    s = String(s).replace(/\s/g, '').replace(',', '.');
+    if (s === '') return NaN;
+    return Number(s);
+  }
+  function parseModes(s) {
+    return s.split(/[\s,;]+/).filter(Boolean).map(Number);
+  }
+  function close(a, b) { return Math.abs(a - b) < 0.011; }
+
+  function setField(id, ok, msg) {
+    var f = document.getElementById('f-' + id);
+    f.className = 'field ' + (ok ? 'ok' : 'no');
+    f.querySelector('.msg').textContent = msg;
+  }
+
+  function check() {
+    var t = tasks[cur];
+    if (t.solved) return;
+    var st = t.st, allOk = true;
+    var m = num(document.getElementById('in-mean').value);
+    var d = num(document.getElementById('in-median').value);
+    var r = num(document.getElementById('in-range').value);
+    var noMode = document.getElementById('in-nomode').checked;
+    var modeTxt = document.getElementById('in-mode').value;
+
+    var okMean = close(m, st.mean), okMed = close(d, st.median), okRange = close(r, st.range);
+    var okMode;
+    if (st.modes.length === 0) okMode = noMode;
+    else {
+      var got = parseModes(modeTxt);
+      okMode = !noMode && got.length === st.modes.length && got.slice().sort(function (a, b) { return a - b; }).every(function (v, i) { return v === st.modes[i]; });
+    }
+    if (isNaN(m) && isNaN(d) && isNaN(r) && !modeTxt && !noMode) {
+      document.getElementById('feedback').innerHTML = '<div class="banner no">Сначала введите ответы.</div>';
+      return;
+    }
+    t.tries++;
+    if (!okMean) t.err.mean++; if (!okMed) t.err.median++; if (!okMode) t.err.mode++; if (!okRange) t.err.range++;
+    setField('mean', okMean, okMean ? 'Верно' : 'Пока нет');
+    setField('median', okMed, okMed ? 'Верно' : 'Пока нет');
+    setField('mode', okMode, okMode ? 'Верно' : 'Пока нет');
+    setField('range', okRange, okRange ? 'Верно' : 'Пока нет');
+    allOk = okMean && okMed && okMode && okRange;
+
+    var fb = document.getElementById('feedback');
+    if (allOk) {
+      t.solved = true; t.firstTry = (t.tries === 1 && !t.shown);
+      fb.innerHTML = '<div class="banner ok">' + (t.firstTry ? 'Все четыре ответа верны. Отлично!' : 'Все четыре ответа верны.') + '</div>';
+      document.getElementById('next').disabled = false;
+      document.getElementById('check').disabled = true;
+      renderProgress();
+    } else {
+      var hints = [];
+      if (!okMed) hints.push('Median: вы сначала расставили числа по порядку?');
+      if (!okMode) hints.push('Mode: найдите число, которое встречается чаще всех. Если все числа встречаются по одному разу, отметьте «Mode нет».');
+      if (!okMean) hints.push('Mean: проверьте сумму, затем поделите её на количество чисел.');
+      if (!okRange) hints.push('Range: наибольшее минус наименьшее.');
+      fb.innerHTML = '<div class="banner no">Над частью ответов стоит подумать ещё.</div><div class="solution"><p>' + esc(hints[0]) + '</p></div>';
+    }
+  }
+
+  function solutionHtml(t) {
+    var st = t.st, n = st.n, s = st.sorted, u = t.ctx ? ' ' + t.ctx.unit : '';
+    var h = '<div class="solution"><h3>Решение</h3>';
+    h += '<p class="step"><b>1. Расставьте числа по порядку.</b></p><div class="sorted">';
+    var mids = n % 2 ? [(n - 1) / 2] : [n / 2 - 1, n / 2];
+    h += s.map(function (v, i) { return '<span' + (mids.indexOf(i) > -1 ? ' class="mid"' : '') + '>' + fmt(v) + '</span>'; }).join('');
+    h += '</div>';
+    h += '<p class="step"><b>Mean.</b> Сумма: ' + s.map(fmt).join(' + ') + ' = ' + fmt(st.sum) + '. Если бы все ' + n + ' чисел были одинаковыми, каждое равнялось бы ' + fmt(st.sum) + ' ÷ ' + n + ' = <b>' + fmt(st.mean) + u + '</b>.</p>';
+    if (n % 2) h += '<p class="step"><b>Median.</b> Чисел ' + n + ', их нечётное количество, поэтому одно число стоит ровно посередине: ' + ((n + 1) / 2) + '-е по счёту. Это <b>' + fmt(st.median) + u + '</b>. С каждой стороны от него по ' + ((n - 1) / 2) + ' чис' + (((n - 1) / 2) === 1 ? 'лу' : 'ла') + '.</p>';
+    else h += '<p class="step"><b>Median.</b> Чисел ' + n + ', их чётное количество, поэтому посередине два числа: ' + fmt(s[n / 2 - 1]) + ' и ' + fmt(s[n / 2]) + '. Одного среднего числа нет, берём точку ровно между ними: (' + fmt(s[n / 2 - 1]) + ' + ' + fmt(s[n / 2]) + ') ÷ 2 = <b>' + fmt(st.median) + u + '</b>.</p>';
+    if (st.modes.length === 0) h += '<p class="step"><b>Mode.</b> Каждое число встречается только один раз, значит, самого популярного нет. <b>Mode нет.</b></p>';
+    else if (st.modes.length === 1) h += '<p class="step"><b>Mode.</b> Число ' + fmt(st.modes[0]) + ' встречается ' + st.maxf + ' раз' + (st.maxf < 5 ? 'а' : '') + ', чаще остальных. Mode = <b>' + fmt(st.modes[0]) + u + '</b>.</p>';
+    else h += '<p class="step"><b>Mode.</b> Числа ' + st.modes.map(fmt).join(' и ') + ' встречаются по ' + st.maxf + ' раз' + (st.maxf < 5 ? 'а' : '') + ', и чаще них нет никого. Ничья, поэтому два значения: <b>' + st.modes.map(fmt).join(' и ') + '</b>.</p>';
+    h += '<p class="step"><b>Range.</b> Наибольшее минус наименьшее: ' + fmt(s[n - 1]) + ' − ' + fmt(s[0]) + ' = <b>' + fmt(st.range) + u + '</b>. Это показывает, насколько числа разбросаны.</p>';
+    h += '</div>';
+    return h;
+  }
+  function ord(k) { return (k % 10 === 1 && k !== 11) ? 'st' : (k % 10 === 2 && k !== 12) ? 'nd' : (k % 10 === 3 && k !== 13) ? 'rd' : 'th'; }
+
+  function showSolution() {
+    var t = tasks[cur];
+    t.shown = true;
+    document.getElementById('sol').innerHTML = solutionHtml(t);
+    document.getElementById('next').disabled = false;
+    renderProgress();
+  }
+
+  function restore(t) {
+    if (t.shown || t.solved) document.getElementById('next').disabled = false;
+    if (t.shown) document.getElementById('sol').innerHTML = solutionHtml(t);
+  }
+
+  function next() {
+    if (cur === TOTAL - 1) { finished = true; } else { cur++; }
+    render();
+    window.scrollTo({ top: 0 });
+  }
+
+  function renderFinal() {
+    var good = tasks.filter(function (t) { return t.solved && t.firstTry; }).length;
+    var M = [['mean', 'Mean'], ['median', 'Median'], ['mode', 'Mode'], ['range', 'Range']];
+    var tot = { mean: 0, median: 0, mode: 0, range: 0 }, allErr = 0, attempts = 0;
+    tasks.forEach(function (t) { attempts += t.tries; M.forEach(function (m) { tot[m[0]] += t.err[m[0]]; allErr += t.err[m[0]]; }); });
+    var max = Math.max(1, tot.mean, tot.median, tot.mode, tot.range);
+    var worst = M.filter(function (m) { return tot[m[0]] === Math.max(tot.mean, tot.median, tot.mode, tot.range) && allErr > 0; }).map(function (m) { return m[1]; });
+
+    var h = '<section class="card final"><span class="tag">Готово</span><div class="big">' + good + ' / ' + TOTAL + '</div><p>заданий, где все четыре ответа верны с первой попытки.</p>';
+    h += '<div class="stats"><h3>Ошибки по темам</h3><div class="bars">';
+    M.forEach(function (m) {
+      h += '<span>' + m[1] + '</span><span class="bar"><i style="width:' + Math.round(tot[m[0]] / max * 100) + '%"></i></span><b>' + tot[m[0]] + '</b>';
+    });
+    h += '</div>';
+    h += '<p class="unit">' + 'Проверок всего: ' + attempts + ', неверных ответов: ' + allErr + '.' + (worst.length ? ' Больше всего ошибок: ' + worst.join(', ') + '.' : ' Ошибок не было.') + '</p>';
+    h += '<h3>По заданиям</h3><div class="tablewrap"><table><thead><tr><th>#</th><th>Mean</th><th>Median</th><th>Mode</th><th>Range</th><th>Результат</th></tr></thead><tbody>';
+    tasks.forEach(function (t, i) {
+      var r = (t.solved && t.firstTry) ? '<span class="pill good">С первой попытки</span>' : t.solved ? '<span class="pill retry">Попыток: ' + t.tries + '</span>' : '<span class="pill shown">Показано решение</span>';
+      h += '<tr><td>' + (i + 1) + '</td><td>' + t.err.mean + '</td><td>' + t.err.median + '</td><td>' + t.err.mode + '</td><td>' + t.err.range + '</td><td>' + r + '</td></tr>';
+    });
+    h += '</tbody></table></div></div>';
+    h += '<div class="actions"><button id="again">Тот же уровень, новые числа</button><button class="ghost" id="change">Изменить уровень или количество</button></div></section>';
+    stage.innerHTML = h;
+    document.getElementById('again').onclick = function () { newSet(); window.scrollTo({ top: 0 }); };
+    document.getElementById('change').onclick = function () { showStart(); window.scrollTo({ top: 0 }); };
+  }
+
+  showStart();
+})();
+</script>
+</body>
+</html>
 
